@@ -12,6 +12,7 @@ import com.UserManagement.service.UserService;
 
 import jakarta.persistence.EntityNotFoundException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -39,17 +40,12 @@ public class UserServiceImpl implements UserService {
         user.setEmail(userDto.getEmail());
         user.setPassword(passwordEncoder.encode(userDto.getPassword()));
         user.setAge(userDto.getAge());
-        user.setPhone(userDto.getPhone());
-        user.setGender(userDto.getGender());
-        user.setAddress(userDto.getAddress());
-        Role role = roleRepository.findByName("ROLE_ADMIN");
-        if(role == null){
-            role = checkRoleExist();
-        }
+        Role role = roleRepository.findByName(userDto.getRole());
         user.setRoles(Arrays.asList(role));
         userRepository.save(user);
     }
 
+    @Override
     public void deleteUserById(Long userId) {
         Optional<User> userOptional = userRepository.findById(userId);
         userOptional.ifPresent(user -> {
@@ -58,6 +54,7 @@ public class UserServiceImpl implements UserService {
         });
     }
 
+    @Override
     public boolean doesUserExist(Long userId) {
         Optional<User> userOptional = userRepository.findById(userId);
         return userOptional.isPresent();
@@ -68,6 +65,7 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByEmail(email);
     }
 
+    @Override
     public UserDto findUserById(Long userId) {
         Optional<User> userOptional = userRepository.findById(userId);
         if(userOptional.isPresent()){
@@ -76,17 +74,28 @@ public class UserServiceImpl implements UserService {
         return null;
     }
 
+    @Override
     public void editUser(UserDto updatedUserDto, Long userId) {
         User existingUser = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
         existingUser.setName(updatedUserDto.getFirstName() + " " + updatedUserDto.getLastName());
         existingUser.setAge(updatedUserDto.getAge());
-        existingUser.setPhone(updatedUserDto.getPhone());
-        existingUser.setGender(updatedUserDto.getGender());
-        existingUser.setAddress(updatedUserDto.getAddress());
+
         if (!updatedUserDto.getPassword().isEmpty()) {
             existingUser.setPassword(passwordEncoder.encode(updatedUserDto.getPassword()));
         }
+
+        Role role = roleRepository.findByName(updatedUserDto.getRole());
+        if (role == null) {
+            throw new EntityNotFoundException("Role not found");
+        }
+
+        // Ensure the roles collection is mutable
+        List<Role> roles = new ArrayList<>();
+        roles.add(role);
+        existingUser.setRoles(roles);
+
         userRepository.save(existingUser);
     }
 
@@ -95,7 +104,7 @@ public class UserServiceImpl implements UserService {
     public List<UserDto> findAllUsers() {
         List<User> users = userRepository.findAll();
         return users.stream()
-                .map((user) -> mapToUserDto(user))
+                .map(this::mapToUserDto)
                 .collect(Collectors.toList());
     }
 
@@ -103,20 +112,16 @@ public class UserServiceImpl implements UserService {
         UserDto userDto = new UserDto();
         userDto.setId(user.getId());
         String[] str = user.getName().split(" ");
-        userDto.setFirstName(str[0]);
-        userDto.setLastName(str[1]);
+        if (str.length > 1) {
+            userDto.setFirstName(str[0]);
+            userDto.setLastName(str[1]);
+        } else {
+            userDto.setFirstName(user.getName());
+            userDto.setLastName("");
+        }
         userDto.setEmail(user.getEmail());
         userDto.setAge(user.getAge());
-        userDto.setPhone(user.getPhone());
-        userDto.setGender(user.getGender());
-        userDto.setAddress(user.getAddress());
         userDto.setRole(user.getRoles().get(0).getName());
         return userDto;
     }
-
-    private Role checkRoleExist(){
-        Role role = new Role();
-        role.setName("ROLE_ADMIN");
-        return roleRepository.save(role);
-    }   
 }

@@ -40,18 +40,8 @@ public class UserDto
     @Max(value = 200, message = "Age should not exceed 200")
     private Integer age;
 
-    @NotEmpty(message="Phone number should not be empty")
-    @Pattern(regexp = "\\d{10}", message = "Phone number should have exactly 10 numbers")
-    private String phone;
+    @NotEmpty(message="Roles should not be empty")
+    @Pattern(regexp = "^(ROLE_ADMIN|ROLE_USER)$", message = "ROLES must be either 'ROLE_ADMIN' or 'ROLE_USER'")
+    private String role;
 
-    @NotEmpty(message="Gender should not be empty")
-    @Pattern(regexp = "^(Male|Female)$", message = "Gender must be either 'Male' or 'Female'")
-    private String gender;
-
-    @NotBlank(message = "Address should not be empty")
-    @Size(min = 5, max = 100, message = "Address should be between 5 and 100 characters")
-    private String address;
-
-	
-	private String role;
 }

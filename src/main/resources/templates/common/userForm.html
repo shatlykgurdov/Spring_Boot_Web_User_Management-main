@@ -21,18 +21,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-6">
-            <div class="form-group mb-3">
-                <label class="form-label">Gender</label>
-                <select class="selectpicker form-control" id="gender" name="gender" th:field="*{gender}"
-                    required>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                </select>
-                <p th:errors="*{gender}" class="text-danger" th:if="${#fields.hasErrors('gender')}">
-                </p>
-            </div>
-        </div>
+
         <div class="col-md-6">
             <div class="form-group mb-3">
                 <label class="form-label">Age</label>
@@ -54,27 +43,9 @@
                 </p>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="form-group mb-3">
-                <label class="form-label">Phone</label>
-                <input class="form-control" id="phone" name="phone"
-                    placeholder="Enter your phone number" th:field="*{phone}" type="text" required />
-                <p th:errors="*{phone}" class="text-danger" th:if="${#fields.hasErrors('phone')}">
-                </p>
-            </div>
-        </div>
     </div>
 
     <div class="row">
-        <div class="col-md-6">
-            <div class="form-group mb-3">
-                <label class="form-label">Address</label>
-                <input class="form-control" id="address" name="address" placeholder="Enter your address"
-                    th:field="*{address}" type="text" required />
-                <p th:errors="*{address}" class="text-danger" th:if="${#fields.hasErrors('address')}">
-                </p>
-            </div>
-        </div>
 
         <div class="col-md-6">
             <div class="form-group mb-3">
@@ -84,6 +55,21 @@
                 <p th:errors="*{password}" class="text-danger" th:if="${#fields.hasErrors('password')}">
                 </p>
             </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+        <div class="form-group mb-3">
+            <label class="form-label">Gender</label>
+            <select class="selectpicker form-control" id="roles" name="roles" th:field="*{role}"
+                    required>
+                <option value="ROLE_ADMIN">ROLE_ADMIN</option>
+                <option value="ROLE_USER">ROLE_USER</option>
+            </select>
+            <p th:errors="*{role}" class="text-danger" th:if="${#fields.hasErrors('role')}">
+            </p>
+        </div>
         </div>
     </div>
 </div>

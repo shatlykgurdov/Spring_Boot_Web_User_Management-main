@@ -4,7 +4,9 @@ import com.UserManagement.Dto.UserDto;
 import com.UserManagement.Entity.User;
 import com.UserManagement.service.UserService;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -15,12 +17,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.security.Principal;
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.security.core.userdetails.UserDetails;
 
 @Controller
 public class AuthController {
@@ -32,6 +38,20 @@ public class AuthController {
 		this.userService = userService;
 	}
 
+	@ModelAttribute
+	public void addAttributes(Model model, Principal principal, Authentication auth) {
+		if (principal != null) {
+			String username = principal.getName();
+			model.addAttribute("username", username);
+			Collection<? extends GrantedAuthority> authorities = auth.getAuthorities();
+			String roles = authorities.stream()
+					.map(GrantedAuthority::getAuthority)
+					.collect(Collectors.joining(", "));
+			model.addAttribute("roles", roles);
+		}
+	}
+
+
 	@GetMapping("/")
 	public String home() {
 		return "redirect:/login";
@@ -42,10 +62,20 @@ public class AuthController {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		if (authentication != null && authentication.isAuthenticated()
 				&& !"anonymousUser".equals(authentication.getPrincipal())) {
-			return "redirect:/users";
+			// Check user roles and redirect accordingly
+			Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+			String roles = authorities.stream()
+					.map(GrantedAuthority::getAuthority)
+					.collect(Collectors.joining(", "));
+			if (roles.contains("ADMIN")) {
+				return "redirect:/admin";
+			} else {
+				return "redirect:/users";
+			}
 		}
 		return "login";
 	}
+
 
 	@GetMapping("/register")
 	public String showRegistrationForm(Model model) {
@@ -119,7 +149,7 @@ public class AuthController {
 		}
 
 		userService.saveUser(userDto);
-		return "redirect:/users?success=true";
+		return "redirect:/admin?success=true";
 	}
 
 	@PreAuthorize("hasRole('ADMIN')")
@@ -130,13 +160,22 @@ public class AuthController {
 		return "add";
 	}
 
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER')")
 	@GetMapping("/users")
 	public String users(Model model) {
 		List<UserDto> users = userService.findAllUsers();
 		model.addAttribute("users", users);
 		return "user";
 	}
+
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+	@GetMapping("/admin")
+	public String admin(Model model) {
+		List<UserDto> users = userService.findAllUsers();
+		model.addAttribute("users", users);
+		return "admin";
+	}
+
 
 	@PreAuthorize("hasRole('ADMIN')")
 	@GetMapping("/edit/{id}")
@@ -155,11 +194,10 @@ public class AuthController {
 			BindingResult result,
 			@PathVariable Long id,
 			Model model) {
-		
-		if (!updatedUserDto.getPassword().isEmpty()) {
-			if (updatedUserDto.getPassword().length() < 7) {
-				result.rejectValue("password", "field.min.length", "Password should have at least 7 characters");
-			}
+
+		// Password validation if not empty
+		if (!updatedUserDto.getPassword().isEmpty() && updatedUserDto.getPassword().length() < 7) {
+			result.rejectValue("password", "field.min.length", "Password should have at least 7 characters");
 		}
 
 		if (result.hasErrors()) {
@@ -167,9 +205,23 @@ public class AuthController {
 			return "edit";
 		}
 
-		userService.editUser(updatedUserDto, id);
-		return "redirect:/users";
+		try {
+			// Update the user
+			userService.editUser(updatedUserDto, id);
+		} catch (EntityNotFoundException e) {
+			result.reject("globalError", e.getMessage());
+			model.addAttribute("user", updatedUserDto);
+			return "edit";
+		} catch (Exception e) {
+			result.reject("globalError", "An unexpected error occurred: " + e.getMessage());
+			model.addAttribute("user", updatedUserDto);
+			return "edit";
+		}
+
+		return "redirect:/admin";
 	}
+
+
 
 	@PreAuthorize("hasRole('ADMIN')")
 	@GetMapping("/delete/{id}")
@@ -201,7 +253,7 @@ public class AuthController {
 				}
 			}
 		}
-		return "redirect:/users";
+		return "redirect:/admin";
 	}
 
 }
